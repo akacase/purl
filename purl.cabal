@@ -1,0 +1,103 @@
+cabal-version:      3.0
+name:               purl
+version:            0.1.0.0
+license:            BSD-3-Clause
+copyright:          2023 Casey Mattingly
+maintainer:         case@capsulecorp.org
+author:             Casey Mattingly
+category:           Library
+
+-- TODO: Before hackage release.
+-- A short (one-line) description of the package.
+synopsis: A library documenting the purl specification and corresponding simple parser
+
+-- A longer description of the package.
+description:
+
+-- A URL where users can report bugs.
+bug-reports: github.com/akacase/purl
+
+extra-source-files:
+  LICENSE
+  README.md
+
+common shared
+  ghc-options:
+    -Wall -Wincomplete-record-updates -Wincomplete-uni-patterns
+    -Wmissing-deriving-strategies -Wunused-foralls -Wunused-foralls
+    -fprint-explicit-foralls -fprint-explicit-kinds
+
+  default-extensions:
+    NoStarIsType
+    BangPatterns
+    ConstraintKinds
+    DataKinds
+    DeriveDataTypeable
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveLift
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    EmptyCase
+    EmptyDataDecls
+    EmptyDataDeriving
+    ExistentialQuantification
+    ExplicitForAll
+    FlexibleContexts
+    FlexibleInstances
+    GADTSyntax
+    GeneralisedNewtypeDeriving
+    ImportQualifiedPost
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    MultiWayIf
+    NumericUnderscores
+    OverloadedStrings
+    PolyKinds
+    PostfixOperators
+    RankNTypes
+    ScopedTypeVariables
+    StandaloneDeriving
+    StandaloneKindSignatures
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    ViewPatterns
+
+  build-depends:
+      megaparsec
+    , text >= 1.2 && < 3
+    , containers >= 0.6 && < 0.7
+    , base >=4.14 && < 4.19
+
+  hs-source-dirs:     src
+  default-language:   Haskell2010
+
+library 
+  import:  shared
+  exposed-modules:
+     Purl 
+
+test-suite unittests
+  import:             shared
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     test
+  main-is:            Main.hs
+  default-extensions:
+      QuasiQuotes
+  build-tool-depends:
+      hspec-discover:hspec-discover ^>= {2.10, 2.11}
+  build-depends:
+      base >=4.14 && < 4.19
+    , purl
+    , text >= 1.2 && < 3
+    , containers >= 0.6 && < 0.7
+    , hspec ^>= {2.10, 2.11}
+  other-modules:
+      Purl
+      ParseSpec 
