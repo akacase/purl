@@ -22,20 +22,12 @@
       ];
       perSystem = { self', system, lib, config, pkgs, ... }: {
         haskellProjects.default = {
-          packages = {
-            # Add source or Hackage overrides here
-            # (Local packages are added automatically)
-            /*
-            aeson.source = "1.5.0.0" # Hackage version
-            shower.source = inputs.shower; # Flake input
-            */
-          };
-
           settings = { };
 
           # Development shell configuration
           devShell = {
             hlsCheck.enable = false;
+            extraLibraries = hp: { inherit (hp) hspec-discover; };
           };
 
           # What should haskell-flake add to flake outputs?
@@ -76,7 +68,7 @@
           repl = {
             description = "Start the cabal repl";
             exec = ''
-              cabal repl "$@"
+              cabal v2-repl "$@"
             '';
             category = "Dev Tools";
           };
@@ -88,14 +80,21 @@
           run = {
             description = "Run the project with ghcid auto-recompile";
             exec = ''
-              ghcid -c "cabal repl exe:purl" --warnings -T :main
+              ghcid -c "cabal v2-repl library:purl" --warnings 
             '';
             category = "Primary";
+          };
+          test = {
+            description = "Run the tests";
+            exec = ''
+              cabal v2-test "$@"
+            '';
+            category = "Dev Tools";
           };
         };
 
         # Default package & app.
-        packages.default = self'.packages.purl;
+        packages.default = pkgs.haskell.lib.dontCheck (self'.packages.purl);
         apps.default = self'.apps.purl;
 
         # Default shell.
@@ -106,9 +105,6 @@
             config.flake-root.devShell
             config.mission-control.devShell
             config.treefmt.build.devShell
-          ];
-          buildInputs = [
-            pkgs.haskellPackages.hspec-discover
           ];
         };
       };

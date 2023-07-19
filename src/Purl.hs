@@ -12,19 +12,11 @@ module Purl (
 ) where
 
 import Control.Monad (void)
-import Data.Text (Text, concat, snoc)
+import Data.Text (Text, concat, cons, snoc)
 import Data.Text qualified as T
-import Text.Megaparsec (MonadParsec (lookAhead, try), ParseErrorBundle, Parsec, ShowErrorComponent, anySingle, manyTill, noneOf, optional, parse, some)
+import Data.Void (Void)
+import Text.Megaparsec (MonadParsec (lookAhead, try), ParseErrorBundle, Parsec, anySingle, manyTill, noneOf, optional, parse, some, (<?>))
 import Text.Megaparsec.Char (alphaNumChar, char)
-import Text.Megaparsec.Error (ShowErrorComponent (showErrorComponent))
-
-data PurlError = SchemeMissing | TypeMissing | NameMissing deriving stock (Eq, Ord, Show)
-
-instance ShowErrorComponent PurlError where
-  showErrorComponent :: PurlError -> String
-  showErrorComponent SchemeMissing = "scheme is missing"
-  showErrorComponent TypeMissing = "type is missing"
-  showErrorComponent NameMissing = "name is missing"
 
 {- |
 this is the URL scheme with the constant value of "pkg".
@@ -71,7 +63,7 @@ data Purl = Purl
   }
   deriving stock (Show, Eq)
 
-type Parser = Parsec PurlError Text
+type Parser = Parsec Void Text
 
 schemeParser :: Parser Scheme
 schemeParser = do
@@ -138,11 +130,13 @@ purlText p =
     ]
 
 sText :: Maybe Subpath -> Text
-sText = maybe "" subpath
+sText sub = case sub of
+  Just s -> cons '#' (subpath s)
+  Nothing -> ""
 
 vText :: Maybe Version -> Text
 vText ver = case ver of
-  Just v -> snoc (version v) '@'
+  Just v -> cons '@' (version v)
   Nothing -> ""
 
 nText :: Maybe Namespace -> Text
@@ -153,20 +147,20 @@ nText ns = case ns of
 qText :: Maybe Qualifiers -> Text
 qText qual =
   case qual of
-    Just q -> snoc (qualifiers q) '?'
+    Just q -> cons '?' (qualifiers q)
     Nothing -> ""
 
 purl :: Parser Purl
 purl = do
-  s <- schemeParser
-  p <- protocolParser
+  s <- schemeParser <?> "scheme present"
+  p <- protocolParser <?> "protocol"
   void $ char '/'
-  ns <- namespaceParser
+  ns <- namespaceParser <?> "namespace"
   void $ char '/'
-  n <- nameParser
-  v <- versionParser
-  q <- qualifiersParser
-  Purl s p ns n v q <$> subpathParser
+  n <- nameParser <?> "name"
+  v <- versionParser <?> "version"
+  q <- qualifiersParser <?> "qualifiers"
+  Purl s p ns n v q <$> subpathParser <?> "subpath"
 
-parsePurl :: Text -> Either (ParseErrorBundle Text PurlError) Purl
-parsePurl = parse purl "(unknown)"
+parsePurl :: Text -> Either (ParseErrorBundle Text Void) Purl
+parsePurl = parse purl "purl spec"
