@@ -151,7 +151,8 @@ schemeParser = do
 
 packageParser :: Parser Package
 packageParser = do
-  void $ satisfy (== ':')
+  void $ satisfy (== ':') -- ':' must come after scheme
+  void $ optional $ try $ some (char '/') -- strip per standard extraneous '/' after ':' if present
   start <- satisfy isAsciiLower -- Must start with a letter
   rest <- many (satisfy isValidChar) -- Followed by any number of valid characters
   let packType = T.pack (start : rest)
