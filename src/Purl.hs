@@ -1,6 +1,7 @@
 module Purl (
   parsePurl,
   purlText,
+  Package,
   Purl (..),
   Scheme (..),
   Namespace (..),
@@ -12,18 +13,18 @@ module Purl (
 
 import Control.Monad (void)
 import Data.Char (isAsciiLower, isDigit)
-import Data.Text (Text, concat, cons, snoc)
+import Data.Text (Text, cons, snoc)
 import Data.Text qualified as T
 import Data.Void (Void)
 import Text.Megaparsec (MonadParsec (lookAhead, try), ParseErrorBundle, Parsec, anySingle, choice, many, manyTill, noneOf, optional, parse, parseMaybe, satisfy, some, (<?>))
-import Text.Megaparsec.Char (alphaNumChar, char, string)
+import Text.Megaparsec.Char (char, string)
 
 {- |
 Each package manager, platform, type, or ecosystem has its own conventions and protocols to identify, locate, and provision software packages.
 The package type is the component of a package URL that is used to capture this information with a short string such as maven, npm, nuget, gem, pypi, etc.
 These are known purl package type definitions.
-Known purl type definitions are formalized here independent of the core Package URL specification. See also a candidate list further down.
-Definitions can also include types reserved for future use.
+Known purl type definitions are formalized here independent of the core Package URL specification. See also a candidate list [here]
+(https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst)
 -}
 data Package
   = ALPM
@@ -96,22 +97,32 @@ this is the URL scheme with the constant value of "pkg".
 One of the primary reason for this single scheme is to facilitate the future official registration of the "pkg" scheme for package URLs.
 Required.
 -}
-newtype Scheme = Scheme {scheme :: Text} deriving stock (Show, Eq)
+data Scheme = Pkg deriving stock (Show, Eq)
 
 -- | some name prefix such as a Maven groupid, a Docker image owner, a GitHub user or organization. Optional and type-specific.
-newtype Namespace = Namespace {namespace :: Text} deriving stock (Show, Eq)
+newtype Namespace = Namespace Text
+  deriving stock (Eq)
+  deriving (Show) via Text
 
 -- | the name of the package. Required.
-newtype Name = Name {name :: Text} deriving stock (Show, Eq)
+newtype Name = Name Text
+  deriving stock (Eq)
+  deriving (Show) via Text
 
 -- | the version of the package. Optional.
-newtype Version = Version {version :: Text} deriving stock (Show, Eq)
+newtype Version = Version Text
+  deriving stock (Eq)
+  deriving (Show) via Text
 
 -- | extra qualifying data for a package such as an OS, architecture, a distro, etc. Optional and type-specific.
-newtype Qualifiers = Qualifiers {qualifiers :: Text} deriving stock (Show, Eq)
+newtype Qualifiers = Qualifiers Text
+  deriving stock (Eq)
+  deriving (Show) via Text
 
 -- | extra subpath within a package, relative to the package root. Optional.
-newtype Subpath = Subpath {subpath :: Text} deriving stock (Show, Eq)
+newtype Subpath = Subpath Text
+  deriving stock (Eq)
+  deriving (Show) via Text
 
 {- |
 Components are designed such that they form a hierarchy from the most significant
@@ -135,8 +146,7 @@ type Parser = Parsec Void Text
 
 schemeParser :: Parser Scheme
 schemeParser = do
-  s <- manyTill alphaNumChar ":"
-  return (Scheme $ T.pack s)
+  Pkg <$ string "pkg"
 
 packageParser :: Parser Package
 packageParser = do
@@ -185,48 +195,54 @@ subpathParser = do
 -- | returns the Purl in the correct format: scheme:protocol\/namespace\/name\@version?qualifiers\#subpath
 purlText :: Purl -> Text
 purlText p =
-  Data.Text.concat
-    [ scheme
+  T.concat
+    [ unScheme
         (purlScheme p)
     , ":"
-    , pText
+    , unPackage
         (purlPackage p)
     , "/"
-    , nText
+    , unNamespace
         (purlNamespace p)
-    , name
-        (purlName p)
-    , vText
+    , unName $ purlName p
+    , unVersion
         (purlVersion p)
-    , qText
+    , unQualifiers
         (purlQualifiers p)
-    , sText
+    , unSubpath
         (purlSubpath p)
     ]
 
-sText :: Maybe Subpath -> Text
-sText sub = case sub of
-  Just s -> cons '#' (subpath s)
+unName :: Name -> Text
+unName (Name n) = n
+
+unScheme :: Scheme -> Text
+unScheme s = case s of
+  Pkg -> "pkg"
+
+unSubpath :: Maybe Subpath -> Text
+unSubpath sub = case sub of
+  Just (Subpath s) -> cons '#' s
   Nothing -> ""
 
-vText :: Maybe Version -> Text
-vText ver = case ver of
-  Just v -> cons '@' (version v)
+unVersion :: Maybe Version -> Text
+unVersion ver = case ver of
+  Just (Version v) -> cons '@' v
   Nothing -> ""
 
-nText :: Maybe Namespace -> Text
-nText ns = case ns of
-  Just n -> snoc (namespace n) '/'
+unNamespace :: Maybe Namespace -> Text
+unNamespace ns = case ns of
+  Just (Namespace n) -> snoc n '/'
   Nothing -> ""
 
-qText :: Maybe Qualifiers -> Text
-qText qual =
+unQualifiers :: Maybe Qualifiers -> Text
+unQualifiers qual =
   case qual of
-    Just q -> cons '?' (qualifiers q)
+    Just (Qualifiers q) -> cons '?' q
     Nothing -> ""
 
-pText :: Package -> Text
-pText p = case p of
+unPackage :: Package -> Text
+unPackage p = case p of
   ALPM -> "alpm"
   APK -> "apk"
   BitBucket -> "bitbucket"
@@ -260,6 +276,7 @@ pText p = case p of
 purl :: Parser Purl
 purl = do
   s <- schemeParser <?> "scheme present"
+  void $ char ':'
   p <- packageParser <?> "package"
   void $ char '/'
   ns <- namespaceParser <?> "namespace"
@@ -269,5 +286,12 @@ purl = do
   q <- qualifiersParser <?> "qualifiers"
   Purl s p ns n v q <$> subpathParser <?> "subpath"
 
+{- |
+maim parsing function, shuold be used like:
+
+@
+parsePurl "pkg:github/cabal/Cabal?os=mac&lang=hs#README.md"
+@
+-}
 parsePurl :: Text -> Either (ParseErrorBundle Text Void) Purl
 parsePurl = parse purl "purl spec"
