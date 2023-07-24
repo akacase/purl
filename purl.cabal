@@ -6,16 +6,10 @@ copyright:          2023 Casey Mattingly
 maintainer:         case@capsulecorp.org
 author:             Casey Mattingly
 category:           Library
-
--- TODO: Before hackage release.
--- A short (one-line) description of the package.
-synopsis: A library documenting the purl specification and corresponding simple parser
-
--- A longer description of the package.
+bug-reports:        https://github.com/akacase/purl/issues
+synopsis:           Purl specification and parser
 description:
-
--- A URL where users can report bugs.
-bug-reports: github.com/akacase/purl
+  A library that documents the purl specification and implements the corresponding parser.
 
 extra-source-files:
   LICENSE
@@ -70,34 +64,32 @@ common shared
     ViewPatterns
 
   build-depends:
-      megaparsec
-    , text >= 1.2 && < 3
-    , containers >= 0.6 && < 0.7
-    , base >=4.14 && < 4.19
+    , base        >=4.14  && <4.19
+    , containers  >=0.6   && <0.7
+    , megaparsec  >=9.2.2 && <9.3
+    , text        >=1.2   && <3
 
   hs-source-dirs:     src
   default-language:   Haskell2010
 
-library 
-  import:  shared
-  exposed-modules:
-     Purl 
+library
+  import:          shared
+  exposed-modules: Purl
 
 test-suite unittests
   import:             shared
   type:               exitcode-stdio-1.0
   hs-source-dirs:     test
   main-is:            Main.hs
-  default-extensions:
-      QuasiQuotes
-  build-tool-depends:
-      hspec-discover:hspec-discover ^>= {2.10, 2.11}
+  default-extensions: QuasiQuotes
+  build-tool-depends: hspec-discover:hspec-discover >=2.10 && <2.11 || ^>=2.11
   build-depends:
-      base >=4.14 && < 4.19
+    , base        >=4.14 && <4.19
+    , containers  >=0.6  && <0.7
+    , hspec       >=2.10 && <2.11 || ^>=2.11
     , purl
-    , text >= 1.2 && < 3
-    , containers >= 0.6 && < 0.7
-    , hspec ^>= {2.10, 2.11}
+    , text        >=1.2  && <3
+
   other-modules:
-      Purl
-      ParseSpec 
+    ParseSpec
+    Purl

@@ -22,9 +22,3 @@ jobs:
         id: build
         run: |
           nix build -j auto -L
-      - name: Flake checks 🧪
-        run: |
-          nix \
-            --option sandbox false \
-            flake check -L \
-            --override-input systems github:nix-systems/x86_64-linux

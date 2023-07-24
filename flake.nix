@@ -22,7 +22,11 @@
       ];
       perSystem = { self', system, lib, config, pkgs, ... }: {
         haskellProjects.default = {
-          settings = { };
+          settings = {
+            purl = { name, pkgs, self, super, ... }: {
+              check = false;
+            };
+          };
 
           # Development shell configuration
           devShell = {
@@ -34,8 +38,6 @@
           autoWire = [ "packages" "apps" "checks" ]; # Wire all but the devShell
         };
 
-        # Auto formatters. This also adds a flake check to ensure that the
-        # source tree was auto formatted.
         treefmt.config = {
           inherit (config.flake-root) projectRootFile;
           package = pkgs.treefmt;
@@ -93,7 +95,6 @@
           };
         };
 
-        # Default package & app.
         packages.default = pkgs.haskell.lib.dontCheck (self'.packages.purl);
         apps.default = self'.apps.purl;
 

@@ -1544,11 +1544,6 @@
       note: "'unless' is already exported from Relude"
       rhs: unless
 - warn:
-      lhs: Control.Monad.when
-      name: "Use 'when' from Relude"
-      note: "'when' is already exported from Relude"
-      rhs: when
-- warn:
       lhs: Data.Bool.bool
       name: "Use 'bool' from Relude"
       note: "'bool' is already exported from Relude"
