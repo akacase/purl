@@ -17,7 +17,7 @@ import Data.Text (Text, cons, snoc)
 import Data.Text qualified as T
 import Data.Void (Void)
 import Text.Megaparsec (MonadParsec (lookAhead, try), ParseErrorBundle, Parsec, anySingle, choice, many, manyTill, noneOf, optional, parse, parseMaybe, satisfy, some, (<?>))
-import Text.Megaparsec.Char (char, string)
+import Text.Megaparsec.Char (alphaNumChar, char, string)
 
 {- |
 Each package manager, platform, type, or ecosystem has its own conventions and protocols to identify, locate, and provision software packages.
@@ -97,7 +97,8 @@ this is the URL scheme with the constant value of "pkg".
 One of the primary reason for this single scheme is to facilitate the future official registration of the "pkg" scheme for package URLs.
 Required.
 -}
-data Scheme = Pkg deriving stock (Show, Eq)
+data Scheme = Pkg
+  deriving stock (Show, Eq)
 
 -- | some name prefix such as a Maven groupid, a Docker image owner, a GitHub user or organization. Optional and type-specific.
 newtype Namespace = Namespace Text
@@ -150,9 +151,10 @@ schemeParser = do
 
 packageParser :: Parser Package
 packageParser = do
-  first <- satisfy isAsciiLower -- Must start with a letter
+  void $ satisfy (== ':')
+  start <- satisfy isAsciiLower -- Must start with a letter
   rest <- many (satisfy isValidChar) -- Followed by any number of valid characters
-  let packType = T.pack (first : rest)
+  let packType = T.pack (start : rest)
   case parseMaybe packages packType of
     Just p -> return p
     Nothing -> fail "Invalid package type"
@@ -161,14 +163,15 @@ packageParser = do
 
 namespaceParser :: Parser (Maybe Namespace)
 namespaceParser = do
-  ns <- optional $ try $ manyTill anySingle (lookAhead $ char '/')
+  ns <- optional $ try $ char '/' >> manyTill alphaNumChar (lookAhead $ char '/')
   case ns of
     Just n -> return (Just (Namespace $ T.pack n))
     Nothing -> return Nothing
 
 nameParser :: Parser Name
 nameParser = do
-  n <- some (noneOf ['@', '?', '#'])
+  void $ satisfy (== '/')
+  n <- some (noneOf ['@', '?', '#', '/'])
   return (Name $ T.pack n)
 
 versionParser :: Parser (Maybe Version)
@@ -192,7 +195,9 @@ subpathParser = do
     Just s -> return (Just (Subpath $ T.pack s))
     Nothing -> return Nothing
 
--- | returns the Purl in the correct format: scheme:protocol\/namespace\/name\@version?qualifiers\#subpath
+{- | returns the Purl in the correct format:
+  scheme:protocol\/namespace\/name\@version?qualifiers\#subpath
+-}
 purlText :: Purl -> Text
 purlText p =
   T.concat
@@ -276,22 +281,13 @@ unPackage p = case p of
 purl :: Parser Purl
 purl = do
   s <- schemeParser <?> "scheme present"
-  void $ char ':'
   p <- packageParser <?> "package"
-  void $ char '/'
   ns <- namespaceParser <?> "namespace"
-  void $ char '/'
   n <- nameParser <?> "name"
   v <- versionParser <?> "version"
   q <- qualifiersParser <?> "qualifiers"
   Purl s p ns n v q <$> subpathParser <?> "subpath"
 
-{- |
-maim parsing function, shuold be used like:
-
-@
-parsePurl "pkg:github/cabal/Cabal?os=mac&lang=hs#README.md"
-@
--}
+-- | main parsing function
 parsePurl :: Text -> Either (ParseErrorBundle Text Void) Purl
 parsePurl = parse purl "purl spec"

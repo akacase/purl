@@ -26,3 +26,7 @@ spec =
       do
         fmap purlText (parsePurl "pkg:github/cabal/Cabal?os=mac&lang=hs")
         `shouldBe` Right "pkg:github/cabal/Cabal?os=mac&lang=hs"
+    it "parses a url without namespace" $
+      do
+        fmap purlText (parsePurl "pkg:github/Cabal?os=mac&lang=hs")
+        `shouldBe` Right "pkg:github/Cabal?os=mac&lang=hs"

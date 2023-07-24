@@ -9,7 +9,7 @@ category:           Library
 bug-reports:        https://github.com/akacase/purl/issues
 synopsis:           Purl specification and parser
 description:
-  A library that documents the purl specification and implements the corresponding parser.
+  A library that documents the purl specification (v1.0.X) and implements the corresponding parser.
 
 extra-source-files:
   LICENSE
